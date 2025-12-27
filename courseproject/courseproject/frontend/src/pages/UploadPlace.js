@@ -3,10 +3,11 @@
  * Allows users to upload new places
  */
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { createPlace } from '../services/placeService';
+import LeafletMapPicker from '../components/LeafletMapPicker';
 
 const UploadPlace = () => {
   const { isAuthenticated } = useContext(AuthContext);
@@ -16,10 +17,11 @@ const UploadPlace = () => {
     name: '',
     description: '',
     category: 'other',
-    latitude: '',
-    longitude: '',
     address: '',
   });
+
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
 
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
@@ -27,7 +29,7 @@ const UploadPlace = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
     }
@@ -40,22 +42,13 @@ const UploadPlace = () => {
     });
   };
 
-  const handleImageChange = (e) => {
-    setImages(Array.from(e.target.files));
-  };
-
-  const handleVideoChange = (e) => {
-    setVideos(Array.from(e.target.files));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    // Validation
-    if (!formData.name || !formData.description || !formData.latitude || !formData.longitude) {
-      setError('Please fill in all required fields');
+    if (!formData.name || !formData.description || !latitude || !longitude) {
+      setError('Please fill all required fields and select a location on map');
       return;
     }
 
@@ -67,22 +60,17 @@ const UploadPlace = () => {
         videos: videos.length > 0 ? videos : null,
       };
 
-      await createPlace(formData, files);
+      await createPlace(
+        {
+          ...formData,
+          latitude,
+          longitude,
+        },
+        files
+      );
+
       setSuccess('Place uploaded successfully!');
-      
-      // Reset form
-      setFormData({
-        name: '',
-        description: '',
-        category: 'other',
-        latitude: '',
-        longitude: '',
-        address: '',
-      });
-      setImages([]);
-      setVideos([]);
-      
-      // Redirect after 2 seconds
+
       setTimeout(() => {
         navigate('/');
       }, 2000);
@@ -93,15 +81,15 @@ const UploadPlace = () => {
     }
   };
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
   return (
     <div className="container">
       <div style={{ maxWidth: '800px', margin: '2rem auto' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Upload a Hidden Gem</h2>
-        
+        <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          Upload a Hidden Gem
+        </h2>
+
         <form onSubmit={handleSubmit} className="form-container">
           <div className="form-group">
             <label>Place Name *</label>
@@ -111,7 +99,6 @@ const UploadPlace = () => {
               value={formData.name}
               onChange={handleChange}
               required
-              placeholder="Enter place name"
             />
           </div>
 
@@ -121,15 +108,18 @@ const UploadPlace = () => {
               name="description"
               value={formData.description}
               onChange={handleChange}
-              required
-              placeholder="Describe this hidden gem..."
               rows="5"
+              required
             />
           </div>
 
           <div className="form-group">
             <label>Category *</label>
-            <select name="category" value={formData.category} onChange={handleChange} required>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+            >
               <option value="restaurant">Restaurant</option>
               <option value="cafe">Cafe</option>
               <option value="park">Park</option>
@@ -137,81 +127,62 @@ const UploadPlace = () => {
               <option value="beach">Beach</option>
               <option value="mountain">Mountain</option>
               <option value="market">Market</option>
+              <option value="temple">Temple</option>
               <option value="other">Other</option>
             </select>
           </div>
 
           <div className="form-group">
-            <label>Latitude *</label>
-            <input
-              type="number"
-              name="latitude"
-              value={formData.latitude}
-              onChange={handleChange}
-              required
-              step="any"
-              placeholder="e.g., 40.7128"
+            <label>Select Location on Map *</label>
+
+            <LeafletMapPicker
+              onSelect={(lat, lng) => {
+                setLatitude(lat);
+                setLongitude(lng);
+              }}
             />
+
+            {latitude && longitude && (
+              <p style={{ marginTop: '0.5rem', color: '#666' }}>
+                Selected: {latitude.toFixed(5)}, {longitude.toFixed(5)}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
-            <label>Longitude *</label>
-            <input
-              type="number"
-              name="longitude"
-              value={formData.longitude}
-              onChange={handleChange}
-              required
-              step="any"
-              placeholder="e.g., -74.0060"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Address</label>
+            <label>Address (optional)</label>
             <input
               type="text"
               name="address"
               value={formData.address}
               onChange={handleChange}
-              placeholder="Street address (optional)"
             />
           </div>
 
           <div className="form-group">
-            <label>Images (max 10)</label>
+            <label>Images</label>
             <input
               type="file"
               accept="image/*"
               multiple
-              onChange={handleImageChange}
+              onChange={(e) => setImages([...e.target.files])}
             />
-            {images.length > 0 && (
-              <p style={{ marginTop: '0.5rem', color: '#666' }}>
-                {images.length} image(s) selected
-              </p>
-            )}
           </div>
 
           <div className="form-group">
-            <label>Videos (max 5)</label>
+            <label>Videos</label>
             <input
               type="file"
               accept="video/*"
               multiple
-              onChange={handleVideoChange}
+              onChange={(e) => setVideos([...e.target.files])}
             />
-            {videos.length > 0 && (
-              <p style={{ marginTop: '0.5rem', color: '#666' }}>
-                {videos.length} video(s) selected
-              </p>
-            )}
           </div>
 
           {error && <div className="error-message">{error}</div>}
           {success && <div className="success-message">{success}</div>}
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+          <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? 'Uploading...' : 'Upload Place'}
           </button>
         </form>
@@ -221,4 +192,3 @@ const UploadPlace = () => {
 };
 
 export default UploadPlace;
-
