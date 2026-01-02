@@ -22,6 +22,7 @@ const UploadPlace = () => {
 
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
@@ -40,6 +41,35 @@ const UploadPlace = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const detectMyLocation = () => {
+    setIsDetectingLocation(true);
+    setError('');
+
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser');
+      setIsDetectingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLatitude(latitude);
+        setLongitude(longitude);
+        setIsDetectingLocation(false);
+      },
+      (error) => {
+        setError(`Unable to retrieve your location: ${error.message}`);
+        setIsDetectingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -134,6 +164,18 @@ const UploadPlace = () => {
 
           <div className="form-group">
             <label>Select Location on Map *</label>
+            
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+              <button 
+                type="button" 
+                className="btn btn-secondary"
+                onClick={detectMyLocation}
+                disabled={isDetectingLocation}
+                style={{ padding: '8px 12px', fontSize: '0.9rem' }}
+              >
+                {isDetectingLocation ? 'Detecting...' : '📍 Detect My Location'}
+              </button>
+            </div>
 
             <LeafletMapPicker
               onSelect={(lat, lng) => {

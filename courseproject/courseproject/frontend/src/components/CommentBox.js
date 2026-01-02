@@ -8,9 +8,6 @@ import { AuthContext } from '../context/AuthContext';
 import { addComment, addReply } from '../services/placeService';
 
 const CommentBox = ({ place, onCommentUpdate }) => {
-  // Safety: if place not loaded yet
-  if (!place) return null;
-
   const { isAuthenticated, user } = useContext(AuthContext);
 
   const [commentText, setCommentText] = useState('');
@@ -18,6 +15,9 @@ const CommentBox = ({ place, onCommentUpdate }) => {
   const [replyIndex, setReplyIndex] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  // Safety: if place not loaded yet (hooks must run before returns)
+  if (!place) return null;
 
   // Add new comment
   const handleSubmit = async (e) => {

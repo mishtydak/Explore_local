@@ -85,7 +85,7 @@ const PlaceDetails = () => {
   // Use first image as a main one if needed (can also be used for SEO/preview)
   const mainImageSrc =
     place.images && place.images.length > 0
-      ? place.images[0]
+      ? place.images[0].url || place.images[0]
       : 'https://via.placeholder.com/800x400?text=No+Image';
 
   return (
@@ -106,10 +106,10 @@ const PlaceDetails = () => {
         <div className="card" style={{ marginBottom: '2rem' }}>
           {place.images && place.images.length > 0 && (
             <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '1rem' }}>
-              {place.images.map((imageUrl, index) => (
+              {place.images.map((imageObj, index) => (
                 <img
                   key={index}
-                  src={imageUrl} // imageUrl is a string URL
+                  src={imageObj.url || imageObj} // Handle both object and string formats
                   alt={`${place.name} ${index + 1}`}
                   style={{ maxHeight: '400px', borderRadius: '8px' }}
                 />
@@ -146,10 +146,10 @@ const PlaceDetails = () => {
         {place.videos && place.videos.length > 0 && (
           <div style={{ marginBottom: '2rem' }}>
             <h3>Videos</h3>
-            {place.videos.map((videoUrl, index) => (
+            {place.videos.map((videoObj, index) => (
               <video
                 key={index}
-                src={videoUrl} // videoUrl is a string URL
+                src={videoObj.url || videoObj} // Handle both object and string formats
                 controls
                 style={{
                   width: '100%',

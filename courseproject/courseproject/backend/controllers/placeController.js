@@ -4,6 +4,7 @@
  */
 
 const Place = require('../models/Place');
+const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
 const { checkDuplicate } = require('../utils/similarity');
 const { uploadToCloudinary, deleteFile } = require('../utils/cloudinary');
@@ -435,36 +436,56 @@ const addReplyToComment = async (req, res) => {
  */
 const getRecommendations = async (req, res) => {
   try {
-    // Get user's recent activity categories
+    // Get user's preferences and activity
+    const user = await User.findById(req.user._id).select('preferences');
     const recentActivities = await ActivityLog.find({ user: req.user._id })
       .sort({ createdAt: -1 })
       .limit(10);
 
-    if (recentActivities.length === 0) {
-      // If no activity, return random places
-      const places = await Place.find({ isDuplicate: false })
-        .limit(6)
-        .sort({ averageRating: -1 });
-      return res.json(places);
+    // Start with user preferences
+    let preferredCategories = user.preferences || [];
+    
+    // If no preferences, fall back to activity-based categories
+    if (preferredCategories.length === 0) {
+      if (recentActivities.length === 0) {
+        // If no activity, return random highly-rated places
+        const places = await Place.find({ isDuplicate: false })
+          .limit(6)
+          .sort({ averageRating: -1, createdAt: -1 });
+        return res.json(places);
+      }
+
+      // Get most viewed categories from activity
+      const categoryCounts = {};
+      recentActivities.forEach((activity) => {
+        categoryCounts[activity.category] = (categoryCounts[activity.category] || 0) + 1;
+      });
+
+      preferredCategories = Object.keys(categoryCounts)
+        .sort((a, b) => categoryCounts[b] - categoryCounts[a])
+        .slice(0, 3);
     }
 
-    // Get most viewed categories
-    const categoryCounts = {};
-    recentActivities.forEach((activity) => {
-      categoryCounts[activity.category] = (categoryCounts[activity.category] || 0) + 1;
-    });
-
-    const topCategories = Object.keys(categoryCounts)
-      .sort((a, b) => categoryCounts[b] - categoryCounts[a])
-      .slice(0, 3);
-
-    // Get places in similar categories
+    // Get places in preferred categories
     const recommendedPlaces = await Place.find({
       isDuplicate: false,
-      category: { $in: topCategories },
+      category: { $in: preferredCategories },
     })
       .limit(6)
       .sort({ averageRating: -1 });
+
+    // If we don't have enough places in preferred categories, add some popular places
+    if (recommendedPlaces.length < 6) {
+      const additionalPlaces = await Place.find({
+        isDuplicate: false,
+        _id: { $nin: recommendedPlaces.map(p => p._id) },
+        category: { $nin: preferredCategories },
+      })
+        .limit(6 - recommendedPlaces.length)
+        .sort({ averageRating: -1 });
+
+      recommendedPlaces.push(...additionalPlaces);
+    }
 
     res.json(recommendedPlaces);
   } catch (error) {

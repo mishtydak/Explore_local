@@ -105,9 +105,55 @@ const getMe = async (req, res) => {
   }
 };
 
+/**
+ * @route   PUT /api/auth/users/:id/preferences
+ * @desc    Update user preferences
+ * @access  Private
+ */
+const updateUserPreferences = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { preferences } = req.body;
+
+    // Validation
+    if (!preferences || !Array.isArray(preferences) || preferences.length > 3) {
+      return res.status(400).json({ message: 'Please provide up to 3 preferences as an array' });
+    }
+
+    // Validate preference values
+    const validCategories = ['restaurant', 'cafe', 'park', 'museum', 'beach', 'mountain', 'market', 'temple', 'other'];
+    const invalidPreferences = preferences.filter(pref => !validCategories.includes(pref));
+    
+    if (invalidPreferences.length > 0) {
+      return res.status(400).json({ message: 'Invalid preference categories' });
+    }
+
+    // Check if user is updating their own preferences or is admin
+    if (req.user._id.toString() !== id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to update preferences' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { preferences },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Update preferences error:', error);
+    res.status(500).json({ message: 'Server error updating preferences' });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
+  updateUserPreferences,
 };
 

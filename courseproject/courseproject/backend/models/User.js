@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Place',
   }],
+  preferences: [{
+    type: String,
+    enum: ['restaurant', 'cafe', 'park', 'museum', 'beach', 'mountain', 'market', 'temple', 'other'],
+  }],
   createdAt: {
     type: Date,
     default: Date.now,

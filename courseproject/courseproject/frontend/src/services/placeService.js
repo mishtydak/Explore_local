@@ -158,3 +158,9 @@ export const getDuplicates = async () => {
   return response.data;
 };
 
+// Update user preferences
+export const updateUserPreferences = async (userId, preferencesData) => {
+  const response = await api.put(`/auth/users/${userId}/preferences`, preferencesData);
+  return response.data;
+};
+

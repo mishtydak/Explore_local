@@ -9,14 +9,14 @@ import { AuthContext } from '../context/AuthContext';
 import { addToWishlist, removeFromWishlist } from '../services/placeService';
 
 const PlaceCard = ({ place }) => {
-  if (!place) return null;
-
   const { isAuthenticated } = useContext(AuthContext);
   const [saved, setSaved] = useState(false);
 
+  if (!place) return null;
+
   const imageUrl =
     place.images && place.images.length > 0
-      ? place.images[0]
+      ? place.images[0].url || place.images[0]
       : 'https://via.placeholder.com/300x200?text=No+Image';
 
   const handleWishlist = async () => {

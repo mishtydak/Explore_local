@@ -14,6 +14,7 @@ import UploadPlace from './pages/UploadPlace';
 import PlaceDetails from './pages/PlaceDetails';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import Preferences from './pages/Preferences';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             <Route path="/place/:id" element={<PlaceDetails />} />
             <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/preferences" element={<Preferences />} />
           </Routes>
         </div>
       </Router>

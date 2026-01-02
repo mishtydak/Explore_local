@@ -12,6 +12,7 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('user'); // Default to user role
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useContext(AuthContext);
@@ -33,10 +34,12 @@ const Register = () => {
 
     setLoading(true);
 
-    const result = await register(username, email, password);
+    // Note: In a real application, you wouldn't allow users to choose admin role during registration
+    // Admin accounts should be created through a separate secure process
+    const result = await register(username, email, password, role);
 
     if (result.success) {
-      navigate('/');
+      navigate('/preferences');
     } else {
       setError(result.message);
     }
@@ -68,6 +71,20 @@ const Register = () => {
             required
             placeholder="Enter your email"
           />
+        </div>
+        <div className="form-group">
+          <label>Role</label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }}
+          >
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+          <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '5px' }}>
+            Note: Admin access requires approval after registration
+          </p>
         </div>
         <div className="form-group">
           <label>Password</label>
@@ -104,4 +121,3 @@ const Register = () => {
 };
 
 export default Register;
-

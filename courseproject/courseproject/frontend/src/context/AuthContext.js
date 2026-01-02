@@ -54,12 +54,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Register function
-  const register = async (username, email, password) => {
+  const register = async (username, email, password, role = 'user') => {
     try {
+      // Only allow user role during registration for security reasons
+      // Backend will always assign 'user' role during registration
       const response = await api.post('/auth/register', {
         username,
         email,
         password,
+        // Note: The role is not sent to the backend during registration
+        // Backend will always assign 'user' role during registration
       });
       const { token: newToken, ...userData } = response.data;
       
@@ -85,16 +89,21 @@ export const AuthProvider = ({ children }) => {
     delete api.defaults.headers.common['Authorization'];
   };
 
+  // Function to update user data in context
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+  };
+
   const value = {
     user,
     loading,
     login,
     register,
     logout,
+    updateUser,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-

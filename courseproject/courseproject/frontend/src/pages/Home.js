@@ -23,7 +23,7 @@ const Home = () => {
     if (isAuthenticated) {
       loadRecommendations();
     }
-  }, [category, isAuthenticated]);
+  }, [category, searchTerm, isAuthenticated]); // Added searchTerm to dependency array
 
   const loadPlaces = async () => {
     try {
@@ -48,7 +48,6 @@ const Home = () => {
 
   const handleSearch = (term) => {
     setSearchTerm(term);
-    loadPlaces();
   };
 
   const handleCategoryChange = (newCategory) => {
@@ -72,18 +71,12 @@ const Home = () => {
         🌍 Discover Hidden Gems
       </h1>
 
-      <SearchBar onSearch={handleSearch} onCategoryChange={handleCategoryChange} />
-
-      {isAuthenticated && recommendations.length > 0 && (
-        <div style={{ marginTop: '3rem' }}>
-          <h2>Recommended for You</h2>
-          <div className="places-grid">
-            {recommendations.map((place) => (
-              <PlaceCard key={place._id} place={place} />
-            ))}
-          </div>
-        </div>
-      )}
+      <SearchBar 
+        onSearch={handleSearch} 
+        onCategoryChange={handleCategoryChange} 
+        searchTerm={searchTerm}
+        category={category}
+      />
 
       <div style={{ marginTop: '3rem' }}>
         <h2>{category === 'all' ? 'All Places' : `${category.charAt(0).toUpperCase() + category.slice(1)} Places`}</h2>
@@ -98,10 +91,19 @@ const Home = () => {
             No places found. Be the first to upload a hidden gem!
           </p>
         )}
+        {isAuthenticated && recommendations.length > 0 && (
+        <div style={{ marginTop: '3rem' }}>
+          <h2>Recommended for You</h2>
+          <div className="places-grid">
+            {recommendations.map((place) => (
+              <PlaceCard key={place._id} place={place} />
+            ))}
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
 };
 
 export default Home;
-
