@@ -771,9 +771,150 @@ select:focus {
 
   .places-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .search-bar {
     flex-direction: column;
+  }
+
+  .container {
+    padding: 0 15px;
+  }
+
+  .form-container {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+
+  .card {
+    margin-bottom: 1rem;
+  }
+
+  .card-image {
+    height: 180px;
+  }
+
+  .card-content {
+    padding: 1rem;
+  }
+
+  .dashboard {
+    padding: 0 15px;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    margin-bottom: 1rem;
+  }
+
+  .search-bar-container {
+    margin: 1rem 0;
+    flex-direction: column;
+  }
+
+  .navbar-brand {
+    font-size: 1.2rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .card-title {
+    font-size: 1.1rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Extra small devices (phones, 600px and down) */
+@media only screen and (max-width: 600px) {
+  .places-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .container {
+    padding: 0 10px;
+  }
+
+  .form-container {
+    margin: 0.5rem;
+    padding: 1rem;
+  }
+
+  .card-image {
+    height: 150px;
+  }
+
+  .navbar-links a {
+    font-size: 0.8rem;
+  }
+
+  .search-bar select,
+  .search-bar input {
+    font-size: 0.9rem;
+    padding: 0.6rem;
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 480px) {
+  .card-image {
+    height: 120px;
+  }
+
+  .card-content {
+    padding: 0.8rem;
+  }
+
+  .card-title {
+    font-size: 1rem;
+  }
+
+  .card-description {
+    font-size: 0.9rem;
+    -webkit-line-clamp: 2;
+  }
+
+  .rating {
+    font-size: 0.9rem;
+  }
+
+  .preferences-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .preference-option {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .weather-info {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
   }
 }

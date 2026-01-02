@@ -16,6 +16,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [userLocation, setUserLocation] = useState(null);
   const { isAuthenticated } = useContext(AuthContext);
 
   useEffect(() => {
@@ -24,11 +25,16 @@ const Home = () => {
       loadRecommendations();
     }
   }, [category, searchTerm, isAuthenticated]); // Added searchTerm to dependency array
+  
+  useEffect(() => {
+    // Get user's location to calculate distances
+    getUserLocation();
+  }, []); // Only run once when component mounts
 
-  const loadPlaces = async () => {
+  const loadPlaces = async (searchLocation = null) => {
     try {
       setLoading(true);
-      const data = await getPlaces(category, searchTerm);
+      const data = await getPlaces(category, searchTerm, searchLocation);
       setPlaces(data);
     } catch (error) {
       console.error('Error loading places:', error);
@@ -49,10 +55,49 @@ const Home = () => {
   const handleSearch = (term) => {
     setSearchTerm(term);
   };
+  
+  // Function to handle location-based search
+  const handleLocationSearch = async (location) => {
+    try {
+      setLoading(true);
+      const data = await getPlaces(category, '', location); // Pass empty search term with location
+      setPlaces(data);
+    } catch (error) {
+      console.error('Error loading places by location:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCategoryChange = (newCategory) => {
     setCategory(newCategory);
   };
+
+  // Function to get user's current location
+  const getUserLocation = () => {
+    if (!navigator.geolocation) {
+      console.error('Geolocation is not supported by this browser');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ latitude, longitude });
+      },
+      (error) => {
+        console.error('Error getting location:', error.message);
+        // User may have denied location access, that's fine
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000, // 1 minute
+      }
+    );
+  };
+
+
 
   if (loading) {
     return (
@@ -73,6 +118,7 @@ const Home = () => {
 
       <SearchBar 
         onSearch={handleSearch} 
+        onLocationSearch={handleLocationSearch}
         onCategoryChange={handleCategoryChange} 
         searchTerm={searchTerm}
         category={category}
@@ -83,7 +129,7 @@ const Home = () => {
         {places.length > 0 ? (
           <div className="places-grid">
             {places.map((place) => (
-              <PlaceCard key={place._id} place={place} />
+              <PlaceCard key={place._id} place={place} userLocation={userLocation} />
             ))}
           </div>
         ) : (
@@ -96,7 +142,7 @@ const Home = () => {
           <h2>Recommended for You</h2>
           <div className="places-grid">
             {recommendations.map((place) => (
-              <PlaceCard key={place._id} place={place} />
+              <PlaceCard key={place._id} place={place} userLocation={userLocation} />
             ))}
           </div>
         </div>

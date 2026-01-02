@@ -110,7 +110,7 @@ const createPlace = async (req, res) => {
  */
 const getAllPlaces = async (req, res) => {
   try {
-    const { category, search } = req.query;
+    const { category, search, latitude, longitude, radius } = req.query;
     let query = { isDuplicate: false };
 
     // Filter by category
@@ -126,9 +126,63 @@ const getAllPlaces = async (req, res) => {
       ];
     }
 
-    const places = await Place.find(query)
-      .populate('uploadedBy', 'username')
-      .sort({ createdAt: -1 });
+    let places;
+    
+    // If location parameters are provided, search within radius
+    if (latitude && longitude && radius) {
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      const rad = parseFloat(radius); // in kilometers
+      
+      // Calculate bounds for approximate search
+      const earthRadiusKm = 6371;
+      const latRad = (rad / earthRadiusKm) * (180 / Math.PI);
+      const lngRad = (rad / earthRadiusKm) * (180 / Math.PI) / Math.cos(lat * Math.PI / 180);
+      
+      const minLat = lat - latRad;
+      const maxLat = lat + latRad;
+      const minLng = lng - lngRad;
+      const maxLng = lng + lngRad;
+      
+      // Add location filter to the query
+      query['location.latitude'] = { $gte: minLat, $lte: maxLat };
+      query['location.longitude'] = { $gte: minLng, $lte: maxLng };
+      
+      places = await Place.find(query)
+        .populate('uploadedBy', 'username')
+        .sort({ createdAt: -1 });
+      
+      // Calculate actual distances and filter more precisely
+      places = places.filter(place => {
+        const placeLat = place.location.latitude;
+        const placeLng = place.location.longitude;
+        
+        // Calculate distance using haversine formula
+        const R = 6371; // Earth's radius in km
+        const dLat = (placeLat - lat) * Math.PI / 180;
+        const dLon = (placeLng - lng) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(lat * Math.PI / 180) * Math.cos(placeLat * Math.PI / 180) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        const distance = R * c;
+        
+        return distance <= rad;
+      });
+      
+      // Sort by distance
+      places.sort((a, b) => {
+        const distA = calculateDistance(lat, lng, a.location.latitude, a.location.longitude);
+        const distB = calculateDistance(lat, lng, b.location.latitude, b.location.longitude);
+        return distA - distB;
+      });
+    } else {
+      // Regular search without location
+      places = await Place.find(query)
+        .populate('uploadedBy', 'username')
+        .sort({ createdAt: -1 });
+    }
 
     res.json(places);
   } catch (error) {
@@ -136,6 +190,19 @@ const getAllPlaces = async (req, res) => {
     res.status(500).json({ message: 'Server error fetching places' });
   }
 };
+
+// Helper function to calculate distance between two coordinates
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c;
+}
 
 /**
  * @route   GET /api/places/:id

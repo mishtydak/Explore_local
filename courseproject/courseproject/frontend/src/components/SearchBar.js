@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-const SearchBar = ({ onSearch, onCategoryChange, searchTerm, category }) => {
+const SearchBar = ({ onSearch, onLocationSearch, onCategoryChange, searchTerm, category }) => {
   const [localSearchTerm, setLocalSearchTerm] = useState('');
   const [localCategory, setLocalCategory] = useState('all');
 
@@ -18,16 +18,28 @@ const SearchBar = ({ onSearch, onCategoryChange, searchTerm, category }) => {
     setLocalCategory(category || 'all');
   }, [category]);
 
-  // Debounced search to avoid too many API calls
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      onSearch(localSearchTerm);
-    }, 300);
+  // Function to geocode location name to coordinates
+  const geocodeLocation = async (locationName) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        return {
+          latitude: parseFloat(data[0].lat),
+          longitude: parseFloat(data[0].lon)
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Geocoding failed:', error);
+      return null;
+    }
+  };
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [localSearchTerm, onSearch]);
+  // Auto-search disabled. Searches run only on Enter or Search button to avoid refreshing while typing.
 
   const handleCategoryChange = (e) => {
     const newCategory = e.target.value;
@@ -40,13 +52,25 @@ const SearchBar = ({ onSearch, onCategoryChange, searchTerm, category }) => {
     setLocalSearchTerm(value);
   };
 
-  const handleSearchClick = () => {
-    onSearch(localSearchTerm);
+  const handleSearchClick = async () => {
+    const term = localSearchTerm.trim();
+    if (!term) {
+      onSearch('');
+      return;
+    }
+
+    const location = await geocodeLocation(term);
+    if (location && onLocationSearch) {
+      onLocationSearch(location);
+    } else {
+      onSearch(term);
+    }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = async (e) => {
     if (e.key === 'Enter') {
-      onSearch(localSearchTerm);
+      e.preventDefault();
+      await handleSearchClick();
     }
   };
 
@@ -58,7 +82,7 @@ const SearchBar = ({ onSearch, onCategoryChange, searchTerm, category }) => {
           placeholder="Search places..."
           value={localSearchTerm}
           onChange={handleInputChange}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
         />
         <select value={localCategory} onChange={handleCategoryChange}>
           <option value="all">All Categories</option>

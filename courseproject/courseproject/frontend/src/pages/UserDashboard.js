@@ -14,6 +14,7 @@ const UserDashboard = () => {
   const navigate = useNavigate();
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -21,6 +22,8 @@ const UserDashboard = () => {
       return;
     }
     loadWishlist();
+    // Get user's location to calculate distances
+    getUserLocation();
   }, [isAuthenticated, navigate]);
 
   const loadWishlist = async () => {
@@ -33,6 +36,30 @@ const UserDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Get user's current location for distance calculation
+  const getUserLocation = () => {
+    if (!navigator.geolocation) {
+      console.error('Geolocation is not supported by this browser');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ latitude, longitude });
+      },
+      (error) => {
+        console.error('Error getting location:', error.message);
+        // User may have denied location access; that's fine
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
   };
 
   const handleRemoveFromWishlist = async (placeId) => {
@@ -72,7 +99,7 @@ const UserDashboard = () => {
           <div className="places-grid">
             {wishlist.map((place) => (
               <div key={place._id}>
-                <PlaceCard place={place} />
+                <PlaceCard place={place} userLocation={userLocation} />
                 <button
                   onClick={() => handleRemoveFromWishlist(place._id)}
                   className="btn btn-danger"

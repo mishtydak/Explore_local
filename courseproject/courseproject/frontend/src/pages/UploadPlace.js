@@ -7,7 +7,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { createPlace } from '../services/placeService';
-import LeafletMapPicker from '../components/LeafletMapPicker';
+// Replaced map picker with Nominatim autocomplete search
 
 const UploadPlace = () => {
   const { isAuthenticated } = useContext(AuthContext);
@@ -23,6 +23,10 @@ const UploadPlace = () => {
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const searchTimer = React.useRef(null);
 
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
@@ -43,7 +47,7 @@ const UploadPlace = () => {
     });
   };
 
-  const detectMyLocation = () => {
+  const detectMyLocation = async () => {
     setIsDetectingLocation(true);
     setError('');
 
@@ -54,10 +58,35 @@ const UploadPlace = () => {
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
         setLatitude(latitude);
         setLongitude(longitude);
+        
+        // Reverse geocode the coordinates to get address
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+          );
+          const data = await response.json();
+          
+          if (data && data.address) {
+            const address = data.address;
+            
+            // Extract city, area, and landmark information
+            const city = address.city || address.town || address.village || '';
+            const area = address.suburb || address.neighbourhood || address.city_district || '';
+            
+            setFormData(prev => ({
+              ...prev,
+              address: `${city}, ${area}`.trim().replace(/, $/, '')
+            }));
+          }
+        } catch (err) {
+          console.error('Reverse geocoding failed:', err);
+          // Continue without address if geocoding fails
+        }
+        
         setIsDetectingLocation(false);
       },
       (error) => {
@@ -163,7 +192,7 @@ const UploadPlace = () => {
           </div>
 
           <div className="form-group">
-            <label>Select Location on Map *</label>
+            <label>Search your area / place / landmark *</label>
             
             <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
               <button 
@@ -177,12 +206,58 @@ const UploadPlace = () => {
               </button>
             </div>
 
-            <LeafletMapPicker
-              onSelect={(lat, lng) => {
-                setLatitude(lat);
-                setLongitude(lng);
-              }}
-            />
+            <div style={{ marginBottom: '10px' }}>
+              <input
+                type="text"
+                placeholder="Search your area / place / landmark"
+                value={searchQuery}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSearchQuery(v);
+                  setSuggestions([]);
+
+                  if (searchTimer.current) clearTimeout(searchTimer.current);
+
+                  if (v && v.length >= 3) {
+                    // debounce
+                    searchTimer.current = setTimeout(async () => {
+                      try {
+                        const res = await fetch(
+                          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&q=${encodeURIComponent(v)}`
+                        );
+                        const data = await res.json();
+                        setSuggestions(Array.isArray(data) ? data : []);
+                      } catch (err) {
+                        console.error('Nominatim search failed', err);
+                      }
+                    }, 300);
+                  }
+                }}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              />
+
+              {suggestions.length > 0 && (
+                <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0', border: '1px solid #ddd', borderRadius: 4, maxHeight: 220, overflow: 'auto' }}>
+                  {suggestions.map((s) => (
+                    <li
+                      key={s.place_id}
+                      style={{ padding: '8px', cursor: 'pointer', borderBottom: '1px solid #eee' }}
+                      onClick={() => {
+                        const lat = parseFloat(s.lat);
+                        const lon = parseFloat(s.lon);
+                        setLatitude(lat);
+                        setLongitude(lon);
+                        setFormData(prev => ({ ...prev, address: s.display_name }));
+                        setSearchQuery(s.display_name);
+                        setSuggestions([]);
+                      }}
+                    >
+                      <div style={{ fontSize: '0.95rem' }}>{s.display_name}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             {latitude && longitude && (
               <p style={{ marginTop: '0.5rem', color: '#666' }}>

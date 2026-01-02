@@ -8,6 +8,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPlace, deletePlace } from '../services/placeService';
 import WeatherWidget from '../components/WeatherWidget';
 import MapEmbed from '../components/MapEmbed';
+import RouteMap from '../components/RouteMap';
 import RatingBox from '../components/RatingBox';
 import CommentBox from '../components/CommentBox';
 import { AuthContext } from '../context/AuthContext';
@@ -20,10 +21,16 @@ const PlaceDetails = () => {
   const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
     loadPlace();
   }, [id]);
+
+  // Ask for user location when component mounts so distance can be calculated
+  useEffect(() => {
+    getUserLocation();
+  }, []);
 
   const loadPlace = async () => {
     try {
@@ -36,6 +43,26 @@ const PlaceDetails = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Get user's current location to calculate distance to this place
+  const getUserLocation = () => {
+    if (!navigator.geolocation) {
+      // Geolocation not supported
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ latitude, longitude });
+      },
+      (err) => {
+        // user denied or error; silently ignore
+        console.error('Geolocation error:', err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   };
 
   const handleDelete = async () => {
@@ -81,6 +108,27 @@ const PlaceDetails = () => {
       </div>
     );
   }
+
+  // Haversine formula to calculate distance (km)
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  // Support multiple possible place coordinate shapes (location object or top-level fields)
+  const placeLat = place.location?.latitude ?? place.latitude ?? place.lat ?? null;
+  const placeLon = place.location?.longitude ?? place.longitude ?? place.lng ?? place.lon ?? null;
+
+  const distanceKm = (userLocation && placeLat != null && placeLon != null)
+    ? calculateDistance(userLocation.latitude, userLocation.longitude, parseFloat(placeLat), parseFloat(placeLon))
+    : null;
 
   // Use first image as a main one if needed (can also be used for SEO/preview)
   const mainImageSrc =
@@ -177,13 +225,19 @@ const PlaceDetails = () => {
             />
           </div>
           <div>
-            <h3>Location</h3>
-            <MapEmbed
-              latitude={place.location?.latitude}
-              longitude={place.location?.longitude}
-              name={place.name}
-            />
-          </div>
+              <h3>Location</h3>
+              {distanceKm !== null && (
+                <div style={{ marginBottom: '0.5rem', color: '#000' }}>
+                  📏 {distanceKm.toFixed(2)} km from your location
+                </div>
+              )}
+              <RouteMap
+                placeLat={place.location?.latitude ?? place.latitude}
+                placeLon={place.location?.longitude ?? place.longitude}
+                placeName={place.name}
+                userLocation={userLocation}
+              />
+            </div>
         </div>
 
         <RatingBox place={place} onRatingUpdate={loadPlace} />

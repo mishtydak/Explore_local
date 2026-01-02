@@ -12,7 +12,7 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('user'); // Default to user role
+  const [role, setRole] = useState(''); // Default to user role
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useContext(AuthContext);
@@ -39,7 +39,11 @@ const Register = () => {
     const result = await register(username, email, password, role);
 
     if (result.success) {
-      navigate('/preferences');
+      if (role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/preferences');
+      }
     } else {
       setError(result.message);
     }

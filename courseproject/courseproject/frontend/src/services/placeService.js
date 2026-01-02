@@ -6,10 +6,15 @@
 import api from './api';
 
 // Get all places
-export const getPlaces = async (category = 'all', search = '') => {
+export const getPlaces = async (category = 'all', search = '', location = null) => {
   const params = {};
   if (category !== 'all') params.category = category;
   if (search) params.search = search;
+  if (location) {
+    params.latitude = location.latitude;
+    params.longitude = location.longitude;
+    params.radius = 50; // Search within 50km radius
+  }
   
   const response = await api.get('/places', { params });
   return response.data;

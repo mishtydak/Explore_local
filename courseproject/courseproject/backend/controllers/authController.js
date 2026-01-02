@@ -20,12 +20,16 @@ const generateToken = (id) => {
  */
 const register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, role } = req.body;
 
     // Validation
     if (!username || !email || !password) {
       return res.status(400).json({ message: 'Please provide all fields' });
     }
+
+    // Validate role if provided
+    const validRoles = ['user', 'admin'];
+    const userRole = validRoles.includes(role) ? role : 'user';
 
     // Check if user already exists
     const userExists = await User.findOne({ $or: [{ email }, { username }] });
@@ -38,6 +42,7 @@ const register = async (req, res) => {
       username,
       email,
       password,
+      role: userRole,
     });
 
     if (user) {
